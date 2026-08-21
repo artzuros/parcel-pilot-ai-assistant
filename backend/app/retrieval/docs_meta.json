@@ -1,0 +1,43 @@
+{
+  "01_support_policy_v3": {
+    "status": "CURRENT",
+    "effective": "2026-05-01",
+    "supersedes": "02_support_policy_v2",
+    "kind": "policy",
+    "title": "Support Policy v3"
+  },
+  "02_support_policy_v2": {
+    "status": "DEPRECATED",
+    "effective": "2025-01-01",
+    "kind": "policy",
+    "title": "Support Policy v2",
+    "usage": "historical only — never cite as current policy"
+  },
+  "03_cancellation_sop_v4": {
+    "status": "CURRENT",
+    "effective": "2026-06-15",
+    "kind": "sop",
+    "title": "Cancellation & Service Credit SOP v4"
+  },
+  "04_product_ops_guide": {
+    "status": "CURRENT",
+    "updated": "2026-08-14",
+    "kind": "product",
+    "title": "Product Operations Guide & Known Issues",
+    "known_issues": ["KI-208", "KI-211", "KI-176"]
+  },
+  "05_northstar_agreement": {
+    "status": "ACTIVE",
+    "account": "ACCT-001",
+    "term_end": "2026-12-31",
+    "kind": "agreement",
+    "title": "Northstar Logistics Enterprise Agreement"
+  },
+  "06_lumenworks_agreement": {
+    "status": "ACTIVE",
+    "account": "ACCT-002",
+    "term_end": "2027-02-28",
+    "kind": "agreement",
+    "title": "LumenWorks Service Agreement"
+  }
+}
