@@ -1,9 +1,9 @@
 import json, pathlib, re
 
-from rank_bm25 import BM250kapi
+from rank_bm25 import BM25Okapi
 
 
-HERE = pathlib.Path(__file__).resolve.parent
+HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 EXTRACTED_DIR = ROOT / "data" / "extracted_text"
 DOCS_META = json.loads((HERE / "docs_meta.json").read_text(encoding="utf-8"))
@@ -57,7 +57,7 @@ def build_index(extracted_dir=None):
                 "section": f"chunk {i}",
                 "text": text,
             })
-    return {"chunks": chunks, "index": BM250kapi([tokenize(c["text"]) for c in chunks])}
+    return {"chunks": chunks, "index": BM25Okapi([tokenize(c["text"]) for c in chunks])}
 
 
 
