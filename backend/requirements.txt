@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+openai>=1.40
+rank-bm25>=0.2.2
+pypdf
+openpyxl
+
