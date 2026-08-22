@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ParcelPilot Ops Assistant — Sign in</title>
+<style>
+  :root { --accent:#1a56db; --bg:#f4f6f9; --card:#ffffff; --border:#e2e8f0; --text:#0f172a; --muted:#64748b; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .wrap { width: 420px; max-width: 92vw; }
+  .logo { text-align: center; margin-bottom: 28px; }
+  .logo .mark { font-size: 30px; }
+  .logo h1 { font-size: 20px; margin-top: 8px; }
+  .logo p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+  .card h2 { font-size: 15px; margin-bottom: 14px; }
+  .role { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border);
+          border-radius: 10px; margin-bottom: 10px; cursor: pointer; background: var(--card); width: 100%; text-align: left; font: inherit; }
+  .role:hover { border-color: var(--accent); background: #f8faff; }
+  .role .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff;
+                  display: flex; align-items: center; justify-content: center; font-weight: 600; flex: 0 0 auto; }
+  .role .meta { flex: 1; }
+  .role .meta b { display: block; font-size: 14px; }
+  .role .meta span { color: var(--muted); font-size: 12px; }
+  .role .tag { font-size: 11px; color: var(--accent); border: 1px solid var(--accent); border-radius: 99px; padding: 2px 8px; }
+  .password { margin-top: 14px; }
+  .password label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
+  .password input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font: inherit; }
+  .btn { margin-top: 12px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: var(--accent);
+         color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn:hover { filter: brightness(1.08); }
+  .error { color: #dc2626; font-size: 12px; margin-top: 8px; text-align: center; min-height: 16px; }
+  .hint { color: var(--muted); font-size: 11px; margin-top: 12px; text-align: center; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">
+      <div class="mark">📦</div>
+      <h1>ParcelPilot Ops Assistant</h1>
+      <p>Internal support chatbot — demo build</p>
+    </div>
+    <div class="card">
+      <h2>Sign in as a staff member</h2>
+      <button class="role" data-user="aisha" data-pass="parcelpilot">
+        <div class="avatar">A</div>
+        <div class="meta"><b>Aisha Khan</b><span>Support Agent</span></div>
+        <span class="tag">support_agent</span>
+      </button>
+      <button class="role" data-user="rohan" data-pass="parcelpilot">
+        <div class="avatar" style="background:#7c3aed">R</div>
+        <div class="meta"><b>Rohan Mehta</b><span>Support Manager</span></div>
+        <span class="tag">manager</span>
+      </button>
+      <button class="role" data-user="neha" data-pass="parcelpilot">
+        <div class="avatar" style="background:#059669">N</div>
+        <div class="meta"><b>Neha Sharma</b><span>Admin</span></div>
+        <span class="tag">admin</span>
+      </button>
+      <div class="password">
+        <label for="pass">Password (mock auth — shared for the demo)</label>
+        <input id="pass" type="password" value="parcelpilot">
+      </div>
+      <button class="btn" id="signin">Sign in</button>
+      <div class="error" id="error"></div>
+      <div class="hint">Access is mocked: role checks are enforced by the backend data layer.</div>
+    </div>
+  </div>
+
+<script>
+// For local testing the frontend talks to the local API; on Cloudflare Pages
+// it uses the deployed backend. Change the deployed URL at deploy time.
+const API = (location.protocol === "file:" || location.origin.startsWith("http://localhost"))
+  ? "http://localhost:8000"
+  : "https://api.YOURDOMAIN.com";   // TODO: set at deploy
+
+let chosen = { username: "aisha", password: "parcelpilot" };
+document.querySelectorAll(".role").forEach(btn => {
+  btn.addEventListener("click", () => {
+    chosen = { username: btn.dataset.user, password: btn.dataset.pass };
+    document.querySelectorAll(".role").forEach(b => b.style.outline = "");
+    btn.style.outline = "2px solid var(--accent)";
+    document.getElementById("pass").value = chosen.password;
+  });
+});
+
+document.getElementById("signin").addEventListener("click", async () => {
+  const password = document.getElementById("pass").value || chosen.password;
+  const err = document.getElementById("error");
+  err.textContent = "";
+  try {
+    const resp = await fetch(API + "/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: chosen.username, password }),
+    });
+    if (!resp.ok) { err.textContent = "Invalid credentials — use password 'parcelpilot'."; return; }
+    const session = await resp.json();
+    localStorage.setItem("pp_session", JSON.stringify(session));
+    location.href = "chat.html";
+  } catch (e) {
+    err.textContent = "Cannot reach the backend at " + API + " — is uvicorn running?";
+  }
+});
+</script>
+</body>
+</html>
