@@ -9,6 +9,7 @@ def login(username, password):
         return None
     session_id = uuid.uuid4().hex
     SESSIONS[session_id] = {
+        "session_id": session_id,
         "username": username,
         "role": user.get("role"),
         "name": user.get("name") or username,
