@@ -3,7 +3,7 @@ from app.retrieval.index import DocSearch, EXTRACTED_DIR
 _search = None
 
 def get_search():
-    # global_search
+    global _search
     if _search is None:
         _search = DocSearch(EXTRACTED_DIR)
     return _search
