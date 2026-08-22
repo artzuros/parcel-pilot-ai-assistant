@@ -52,21 +52,22 @@ def test_pause_flow(store, monkeypatch):
         (None, [tc("c1", "get_tickets", '{"ticket_id": "TKT-501"}')]),
         (None, [tc("c2", "escalate_ticket",
                    '{"ticket_id": "TKT-501", "reason": "high priority"}')]),
-        ("Understood - this escalation needs a manager to confirm. Shall I proceed?", []),
     )
     monkeypatch.setattr(deepseek, "chat", fake)
     events = []
     final, pending, msgs = loop.run_turn(AISHA, "Escalate TKT-501 please",
                                          emit=lambda n, p: events.append((n, p)))
-    assert final.startswith("Understood")
-    assert pending is not None and pending["status"] == "pending"
-    names = [n for n, _ in events]
-    assert names == ["tool_start", "tool_result",
-                     "tool_start", "tool_result", "confirmation_requested"]
-    confirmed = events[-1][1]
-    assert confirmed["action_id"] == pending["action_id"]
-    assert confirmed["requires_role"] == "manager"
-    assert any(m["role"] == "system" and "PAUSE" in m["content"] for m in msgs)
+    # New pause contract: the turn ends immediately with a deterministic
+    # confirmation prompt — no second model call, no explanation generated.
+    assert final.startswith("Awaiting your confirmation")
+    assert "escalate_ticket" in final
+    assert pending is not None
+    assert pending.get("status") == "pending"
+    assert any(n == "confirmation_requested" for n, _ in events)
+    # the tool response for the pending call must exist (1 call -> 1 response)
+    assert any(m.get("role") == "tool" and m.get("tool_call_id") == "c2"
+               for m in msgs)
+
 
 
 def test_malformed_arguments_recovered(store, monkeypatch):
