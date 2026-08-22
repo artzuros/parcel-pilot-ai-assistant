@@ -8,13 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from app import auth
+from app import auth, ratelimit
 from app.agent import loop
 from app.config import REFERENCE_NOW
 from app.data import db
 from app.data import seed as seedmod
 from app.executors import actions
-
 
 @asynccontextmanager
 async def lifespan(_app):
@@ -66,6 +65,11 @@ async def api_chat(req: ChatRequest):
     session = auth.get_session(req.session_id)
     if session is None:
         return JSONResponse(status_code=401, content={"error": "unauthorized"})
+    allowed, retry_after = ratelimit.check(req.session_id)
+    if not allowed:
+        return JSONResponse(status_code=429,
+                            content={"detail": f"Rate limit exceeded. "
+                                     f"Try again in {retry_after}s."})
     events = []
 
     def emit(name, payload):
@@ -96,5 +100,5 @@ async def api_confirm(req: ConfirmRequest):
             session, req.action_id, req.approve, messages=msgs)
         loop.CHATS[req.session_id] = msgs
         reply = final
-        next_pending = pending.get("action_id") if pending else None
+        next_pending = pending if pending else None
     return {"result": result, "reply": reply, "next_pending": next_pending}
