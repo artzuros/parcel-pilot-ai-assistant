@@ -66,6 +66,26 @@ CREATE TABLE IF NOT EXISTS audit(
     detail TEXT,
     at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS tasks (
+    task_id TEXT PRIMARY KEY,
+    ticket_id TEXT,
+    description TEXT NOT NULL,
+    due_at TEXT,
+    status TEXT NOT NULL DEFAULT 'open',
+    created_at TEXT NOT NULL,
+    created_by TEXT
+);
+
+CREATE TABLE IF NOT EXISTS credits (
+    credit_id TEXT PRIMARY KEY,
+    order_id TEXT NOT NULL,
+    amount_inr REAL NOT NULL,
+    status TEXT NOT NULL DEFAULT 'issued',
+    issued_at TEXT,
+    issued_by TEXT
+);
+
 """
 
 def get_connection():
