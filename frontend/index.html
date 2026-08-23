@@ -4,68 +4,172 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ParcelPilot Ops Assistant — Sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { --accent:#1a56db; --bg:#f4f6f9; --card:#ffffff; --border:#e2e8f0; --text:#0f172a; --muted:#64748b; }
+  :root {
+    --ink:#141a1f; --ink-soft:#232c34;
+    --paper:#f6f2ea; --card:#fffdf9;
+    --line:#e2dbcb; --line-strong:#cfc6b0;
+    --text:#1b2027; --muted:#8a7f6d;
+    --accent:#e8590c; --accent-deep:#a83f13; --accent-paper:#fdeadb;
+    --ok:#1f7a5c; --ok-bg:#e6f4ee;
+    --warn:#a8710f; --err:#c0392b;
+    --font-display:'Big Shoulders Display', 'Arial Narrow', sans-serif;
+    --font-body:'Inter', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-         background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-  .wrap { width: 420px; max-width: 92vw; }
-  .logo { text-align: center; margin-bottom: 28px; }
-  .logo .mark { font-size: 30px; }
-  .logo h1 { font-size: 20px; margin-top: 8px; }
-  .logo p { color: var(--muted); font-size: 13px; margin-top: 4px; }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
-  .card h2 { font-size: 15px; margin-bottom: 14px; }
-  .role { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border);
-          border-radius: 10px; margin-bottom: 10px; cursor: pointer; background: var(--card); width: 100%; text-align: left; font: inherit; }
-  .role:hover { border-color: var(--accent); background: #f8faff; }
-  .role .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff;
-                  display: flex; align-items: center; justify-content: center; font-weight: 600; flex: 0 0 auto; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--font-body);
+    background:
+      radial-gradient(circle, rgba(20,26,31,.06) 1px, transparent 1.2px) 0 0/18px 18px,
+      var(--paper);
+    color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 32px 16px;
+  }
+  .wrap { width: 440px; max-width: 100%; }
+
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent-deep); text-align: center; margin-bottom: 14px;
+  }
+
+  .logo { text-align: center; margin-bottom: 4px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .logo .mark {
+    width: 46px; height: 46px; border-radius: 8px; background: var(--ink); color: var(--paper);
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    box-shadow: 0 2px 0 var(--line-strong);
+  }
+  .logo h1 { font-family: var(--font-display); font-weight: 800; font-size: 30px; letter-spacing: .01em; line-height: 1; }
+  .logo p { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  .barcode {
+    height: 20px; margin: 18px 2px 20px;
+    background-image: repeating-linear-gradient(90deg,
+      var(--ink) 0 2px, transparent 2px 5px,
+      var(--ink) 5px 6px, transparent 6px 9px,
+      var(--ink) 9px 12px, transparent 12px 20px,
+      var(--ink) 20px 21px, transparent 21px 26px,
+      var(--ink) 26px 29px, transparent 29px 32px);
+    opacity: .55;
+  }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    box-shadow: 0 1px 0 rgba(20,16,8,.03), 0 12px 28px -18px rgba(20,16,8,.35);
+    overflow: hidden;
+  }
+  .card-inner { padding: 24px 24px 20px; }
+  .card h2 {
+    font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--muted); margin-bottom: 14px;
+  }
+
+  .role {
+    display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid var(--line);
+    border-radius: 10px; margin-bottom: 8px; cursor: pointer; background: var(--card); width: 100%;
+    text-align: left; font: inherit; transition: border-color .15s ease, transform .15s ease, background .15s ease;
+    outline-offset: 3px;
+  }
+  .role:hover { border-color: var(--accent); background: var(--accent-paper); transform: translateX(2px); }
+  .role:last-of-type { margin-bottom: 0; }
+  .role .avatar {
+    width: 34px; height: 34px; border-radius: 8px; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: var(--font-display);
+    font-size: 16px; flex: 0 0 auto;
+  }
   .role .meta { flex: 1; }
-  .role .meta b { display: block; font-size: 14px; }
+  .role .meta b { display: block; font-size: 14px; font-weight: 600; }
   .role .meta span { color: var(--muted); font-size: 12px; }
-  .role .tag { font-size: 11px; color: var(--accent); border: 1px solid var(--accent); border-radius: 99px; padding: 2px 8px; }
-  .password { margin-top: 14px; }
-  .password label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
-  .password input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font: inherit; }
-  .btn { margin-top: 12px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: var(--accent);
-         color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
-  .btn:hover { filter: brightness(1.08); }
-  .error { color: #dc2626; font-size: 12px; margin-top: 8px; text-align: center; min-height: 16px; }
-  .hint { color: var(--muted); font-size: 11px; margin-top: 12px; text-align: center; }
+  .role .tag {
+    font-family: var(--font-mono); font-size: 10px; color: var(--accent-deep); border: 1px dashed var(--accent);
+    border-radius: 5px; padding: 3px 7px; white-space: nowrap;
+  }
+
+  .perforation {
+    position: relative; height: 0; margin: 18px -24px 0;
+    border-top: 1.5px dashed var(--line-strong);
+  }
+  .perforation::before, .perforation::after {
+    content: ""; position: absolute; top: -8px; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--paper); border: 1px solid var(--line);
+  }
+  .perforation::before { left: -8px; }
+  .perforation::after { right: -8px; }
+
+  .password { margin-top: 18px; }
+  .password label {
+    font-family: var(--font-mono); font-size: 11px; color: var(--muted); display: block; margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .password input {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit;
+    font-family: var(--font-mono); font-size: 13px; background: var(--paper);
+  }
+  .password input:focus { outline: 2px solid var(--accent-paper); border-color: var(--accent); }
+
+  .btn {
+    margin-top: 14px; width: 100%; padding: 13px; border: 0; border-radius: 9px; background: var(--ink);
+    color: var(--paper); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer;
+    letter-spacing: .02em; display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: background .15s ease;
+  }
+  .btn:hover { background: var(--ink-soft); }
+  .btn::after { content: "→"; }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .error { color: var(--err); font-size: 12px; margin-top: 10px; text-align: center; min-height: 16px; font-family: var(--font-mono); }
+  .hint {
+    color: var(--muted); font-size: 11px; margin-top: 14px; text-align: center; font-family: var(--font-mono);
+    padding-top: 12px; border-top: 1px solid var(--line);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .role { transition: none; }
+  }
 </style>
 </head>
 <body>
   <div class="wrap">
+    <div class="eyebrow">Internal tool · demo build</div>
     <div class="logo">
       <div class="mark">📦</div>
-      <h1>ParcelPilot Ops Assistant</h1>
-      <p>Internal support chatbot — demo build</p>
+      <h1>ParcelPilot</h1>
+      <p>Ops Assistant — sign in to continue</p>
     </div>
+    <div class="barcode" aria-hidden="true"></div>
     <div class="card">
-      <h2>Sign in as a staff member</h2>
-      <button class="role" data-user="aisha" data-pass="parcelpilot">
-        <div class="avatar">A</div>
-        <div class="meta"><b>Aisha Khan</b><span>Support Agent</span></div>
-        <span class="tag">support_agent</span>
-      </button>
-      <button class="role" data-user="rohan" data-pass="parcelpilot">
-        <div class="avatar" style="background:#7c3aed">R</div>
-        <div class="meta"><b>Rohan Mehta</b><span>Support Manager</span></div>
-        <span class="tag">manager</span>
-      </button>
-      <button class="role" data-user="neha" data-pass="parcelpilot">
-        <div class="avatar" style="background:#059669">N</div>
-        <div class="meta"><b>Neha Sharma</b><span>Admin</span></div>
-        <span class="tag">admin</span>
-      </button>
-      <div class="password">
-        <label for="pass">Password (mock auth — shared for the demo)</label>
-        <input id="pass" type="password" value="parcelpilot">
+      <div class="card-inner">
+        <h2>Sign in as a staff member</h2>
+        <button class="role" data-user="aisha" data-pass="parcelpilot">
+          <div class="avatar" style="background:var(--accent)">A</div>
+          <div class="meta"><b>Aisha Khan</b><span>Support Agent</span></div>
+          <span class="tag">support_agent</span>
+        </button>
+        <button class="role" data-user="rohan" data-pass="parcelpilot">
+          <div class="avatar" style="background:#6b4fa0">R</div>
+          <div class="meta"><b>Rohan Mehta</b><span>Support Manager</span></div>
+          <span class="tag">manager</span>
+        </button>
+        <button class="role" data-user="neha" data-pass="parcelpilot">
+          <div class="avatar" style="background:var(--ok)">N</div>
+          <div class="meta"><b>Neha Sharma</b><span>Admin</span></div>
+          <span class="tag">admin</span>
+        </button>
+
+        <div class="perforation" aria-hidden="true"></div>
+
+        <div class="password">
+          <label for="pass">Password (mock auth — shared for the demo)</label>
+          <input id="pass" type="password" value="parcelpilot">
+        </div>
+        <button class="btn" id="signin">Sign in</button>
+        <div class="error" id="error"></div>
+        <div class="hint">Access is mocked · role checks are enforced by the backend data layer.</div>
       </div>
-      <button class="btn" id="signin">Sign in</button>
-      <div class="error" id="error"></div>
-      <div class="hint">Access is mocked: role checks are enforced by the backend data layer.</div>
     </div>
   </div>
 
