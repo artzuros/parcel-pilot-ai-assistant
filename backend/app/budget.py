@@ -29,3 +29,12 @@ def remaining(username):
 
 def check(username, estimated_next_call):
     return remaining(username) >= estimated_next_call
+
+def stats(username):
+    with _LOCK:
+        day = _today()
+        d, used = _DAILY.get(username, (day, 0))
+        if d != day:
+            used = 0
+        return {"spent": used, "limit": _DAILY_CAP,
+                "remaining": _DAILY_CAP - used}

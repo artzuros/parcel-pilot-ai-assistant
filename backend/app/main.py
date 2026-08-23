@@ -1,4 +1,5 @@
-# main.py -- FastAPI app: login, streaming chat, confirmation.
+# main.py -- FastAPI app: login, live-streaming chat, confirmation.
+import asyncio
 import json
 
 from contextlib import asynccontextmanager
@@ -8,10 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from app import auth, ratelimit
+from app import auth, ratelimit, budget
 from app.agent import loop
 from app.config import REFERENCE_NOW
-from app.data import db
+from app.data import db, store
 from app.data import seed as seedmod
 from app.executors import actions
 
@@ -70,21 +71,42 @@ async def api_chat(req: ChatRequest):
         return JSONResponse(status_code=429,
                             content={"detail": f"Rate limit exceeded. "
                                      f"Try again in {retry_after}s."})
-    events = []
-
-    def emit(name, payload):
-        events.append(_sse(name, payload))
-
-    final, pending, msgs = loop.run_turn(session, req.message, emit=emit)
-    loop.CHATS[req.session_id] = msgs
-    events.append(_sse("final", {"text": final,
-                                "pending": pending.get("action_id") if pending else None}))
 
     async def stream():
-        for ev in events:
-            yield ev
+        # The agent loop is synchronous and may make several model calls;
+        # run it in a worker thread and ship every SSE event over a queue
+        # the moment it is produced — that is what makes the reply stream.
+        main_loop = asyncio.get_running_loop()
+        queue = asyncio.Queue()
 
-    return StreamingResponse(stream(), media_type="text/event-stream")
+        def emit(name, payload):
+            main_loop.call_soon_threadsafe(queue.put_nowait, _sse(name, payload))
+
+        def worker():
+            try:
+                final, pending, msgs = loop.run_turn(session, req.message, emit=emit)
+                loop.CHATS[req.session_id] = msgs
+                emit("final", {"text": final,
+                               "pending": pending.get("action_id") if pending else None})
+            except Exception as e:      # never leave the client hanging
+                emit("final", {"text": f"Sorry — something went wrong: {e}",
+                               "pending": None})
+            finally:
+                main_loop.call_soon_threadsafe(queue.put_nowait, None)
+
+        task = asyncio.create_task(asyncio.to_thread(worker))
+        try:
+            while True:
+                item = await queue.get()
+                if item is None:
+                    break
+                yield item
+        finally:
+            await task
+
+    return StreamingResponse(
+        stream(), media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.post("/api/confirm")
@@ -102,3 +124,22 @@ async def api_confirm(req: ConfirmRequest):
         reply = final
         next_pending = pending if pending else None
     return {"result": result, "reply": reply, "next_pending": next_pending}
+
+
+@app.get("/api/pending")
+async def api_pending(session_id: str):
+    session = auth.get_session(session_id)
+    if session is None:
+        return JSONResponse(status_code=401, content={"error": "unauthorized"})
+    approvals = [p for p in store.list_pending()
+                 if auth.require_role(session, p["requires_role"])
+                 or session.get("role") == "admin"]
+    submissions = store.list_submissions(session_id)
+    return {"approvals": approvals, "submissions": submissions}
+
+@app.get("/api/budget")
+async def api_budget(session_id: str):
+    session = auth.get_session(session_id)
+    if session is None:
+        return JSONResponse(status_code=401, content={"error": "unauthorized"})
+    return {"username": session["username"], **budget.stats(session["username"])}
