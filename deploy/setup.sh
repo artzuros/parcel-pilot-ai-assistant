@@ -7,6 +7,16 @@ REPO="$HOME/parcel-pilot-ai-assistant"
 sudo apt-get update -y
 sudo apt-get install -y git python3-venv python3-pip
 
+# Cloudflare Tunnel client (outbound-only ingress for the API)
+if ! command -v cloudflared >/dev/null 2>&1; then
+  sudo mkdir -p --mode=0755 /usr/share/keyrings
+  curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
+    | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+  echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main" \
+    | sudo tee /etc/apt/sources.list.d/cloudflared.list >/dev/null
+  sudo apt-get update -y && sudo apt-get install -y cloudflared
+fi
+
 if [ ! -d "$REPO" ]; then
   git clone "$REPO_URL" "$REPO"
 fi
