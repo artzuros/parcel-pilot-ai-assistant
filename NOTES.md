@@ -67,9 +67,8 @@ four layers:
 
 ## AI tooling statement
 
-Development was AI-assisted: Claude Code (Anthropic's CLI) was used to
-implement and iterate on the codebase under the author's direction —
-including writing most of the backend, the frontend, and this documentation.
-All code was reviewed, all 92 unit tests run and passing, and the end-to-end
-flows were smoke-tested against the live deployment. The author takes full
-responsibility for the design decisions and the code.
+Development was AI-assisted: Deepseek helped implement
+and iterate on the codebase under the my direction — including the
+backend, the frontend, and parts of this documentation. All code was
+reviewed, all 92 unit tests run and passing, and the end-to-end flows were
+smoke-tested against the live deployment.
