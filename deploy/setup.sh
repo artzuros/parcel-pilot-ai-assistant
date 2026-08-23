@@ -4,7 +4,7 @@ set -euo pipefail
 REPO_URL="https://github.com/artzuros/parcel-pilot-ai-assistant.git"
 REPO="$HOME/parcel-pilot-ai-assistant"
 
-sudo dnf install -y git python3-pip
+sudo dnf install -y git python3-pip python3.11
 
 # Cloudflare Tunnel client (outbound-only ingress for the API)
 if ! command -v cloudflared >/dev/null 2>&1; then
@@ -17,7 +17,8 @@ if [ ! -d "$REPO" ]; then
 fi
 
 cd "$REPO/backend"
-python3 -m venv .venv
+rm -rf .venv   # AL2023 default python3 is 3.9; app requires 3.10+ (PEP 604)
+python3.11 -m venv .venv
 ./.venv/bin/pip install -r requirements.txt
 
 if [ ! -f /etc/parcelpilot.env ]; then
