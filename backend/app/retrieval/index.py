@@ -17,7 +17,7 @@ AUTHORITY_WEIGHT = {
 }
 
 def tokenize(text):
-    return re.findall(r"[a-z0-9]+", (text or "".lower()))
+    return re.findall(r"[a-z0-9]+", (text or "").lower())
 
 def _chunk_text(text, max_len=500):
     chunks = []

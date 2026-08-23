@@ -30,13 +30,25 @@ def test_deprecated_flag_surfaces(search):
 
 
 def test_agreement_surfaces_for_northstar(search):
-    r = search.search("Northstar cancellation fee", max_results=5)
+    r = search.search("Northstar service agreement", max_results=5)
     assert r[0]["doc_id"].startswith("05_"), "agreement should top account-specific queries"
+    # and it must stay in the top results for a mixed-terms query
+    r2 = search.search("Northstar cancellation fee", max_results=5)
+    assert any(x["doc_id"].startswith("05_") for x in r2[:3])
 
 
 def test_sop_surfaces_for_cancellation(search):
     r = search.search("cancellation fee 250", max_results=5)
     assert any(x["doc_id"].startswith("03_") for x in r[:3])
+
+
+def test_tokenize_lowercases_input():
+    # Regression: `(text or "".lower())` bound .lower() to "" — nothing was
+    # lowercased, so uppercase letters were dropped as unmatched tokens
+    # (e.g. "TKT-501" tokenized to ["501"], killing recall on ticket/order IDs).
+    assert ridx.tokenize("TKT-501") == ["tkt", "501"]
+    assert ridx.tokenize("Northstar SLA") == ["northstar", "sla"]
+    assert ridx.tokenize(None) == []
 
 
 def test_known_issue_retrievable(search):
