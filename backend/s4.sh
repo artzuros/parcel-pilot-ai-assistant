@@ -65,18 +65,21 @@ AISHA=$(login aisha)
 ROHAN=$(login rohan)
 echo "Sessions: aisha=${AISHA:0:8}… rohan=${ROHAN:0:8}…"
 
-# ── Beat 1: manager gate ──────────────────────────────────────────────
-# EXPECT: bot verifies the breach (get_tickets + sla_deadline) then proposes
-# escalation -> ⚠ CONFIRM escalate_ticket … role=manager
+# ── Beat 1: manager gate (routing) ────────────────────────────────────
+# EXPECT: NO confirmation_requested — the action is submitted and routed to
+# the manager. Reply says it awaits manager approval; LAST_ACTION captured.
 chat "$AISHA" "TKT-501 has breached its SLA. Escalate it."
+if [ -z "$LAST_ACTION" ]; then
+  echo "  !! no action_id — submission failed"
+fi
 
-# EXPECT: permission_denied — aisha is support_agent, escalation needs manager
+# EXPECT: permission_denied — aisha's role can't confirm it (backstop)
 confirm "$AISHA" "$LAST_ACTION" true
 
 # EXPECT: executed — rohan (manager) approves; reply reports executed
 confirm "$ROHAN" "$LAST_ACTION" true
 
-# EXPECT: status = escalated
+# EXPECT: status = escalated — aisha's history was rewritten, bot reports it
 chat "$AISHA" "What is the current status of TKT-501?"
 
 # ── Beat 2: policy judgment ───────────────────────────────────────────

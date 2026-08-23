@@ -10,9 +10,10 @@ from app.agent.args_models import validate_args
 
 MAX_TOOL_TURNS = 6
 CHATS = {}
-# action_id -> the LLM tool_call id that proposed it. Needed when the user
-# confirms/rejects so we can answer the original tool_call with a `tool`
-# response (the API requires every tool_call to be answered).
+# action_id -> where its pending tool response lives, so a confirmation
+# (possibly from a different session) can rewrite it IN PLACE with the
+# outcome. The API requires every tool_call to be answered by exactly one
+# tool response, so we rewrite, never append.
 PENDING_TC = {}
 
 def _messages(session_id):
@@ -42,14 +43,15 @@ def run_turn(session, user_text=None, emit=None, messages=None):
         if not budget.check(session.get("username"), estimate):
             return ("Your daily token budget is exhausted — this session can't continue until tomorrow. Ask an admin to raise the cap.", pending, msgs)
         try:
-            resp = deepseek.chat(full, tools=tools.TOOLS_SCHEMA)
+            resp = deepseek.chat(full, tools=tools.TOOLS_SCHEMA,
+                                on_delta=lambda d: emit("text_delta", {"delta": d}))
         except Exception as e:
             return (f"Sorry — the model call failed: {e}", pending, msgs)
         usage = getattr(resp, "usage", None)
         if usage is not None:
             budget.record(session.get("username"),
                         getattr(usage, "total_tokens", 0) or 0)
-        
+
         msg = resp.choices[0].message
         calls = [c for c in (msg.tool_calls or [])
                 if c.id and c.function and c.function.name]
@@ -94,28 +96,18 @@ def run_turn(session, user_text=None, emit=None, messages=None):
             emit("tool_result", {"tool": name, "result": result})
             msgs.append({"role": "tool", "tool_call_id": c.id,
                         "content": json.dumps(result, default=str)})
-            if isinstance(result, dict) and result.get("requires_confirmation") \
-                    and pending is None:
-                pending = dict(result)
+            if isinstance(result, dict) and result.get("requires_confirmation"):
+                # Routing: the action sits in the pending store until the
+                # role named in requires_role approves it via the
+                # /api/pending panel. Register where this tool response
+                # lives so a confirmation can rewrite it with the outcome.
+                pending = pending or dict(result)
                 pending.setdefault("action_type", name)
-                PENDING_TC[result.get("action_id")] = c.id
-                emit("confirmation_requested", {
-                    "action_id": result.get("action_id"),
-                    "action_type": result.get("action_type", name),
-                    "requires_role": result.get("requires_role"),
-                    "amount_inr": result.get("amount_inr"),
-                    "message": result.get("message"),
-                })
+                PENDING_TC[result.get("action_id")] = {
+                    "session_id": session["session_id"],
+                    "tc_id": c.id,
+                }
 
-        if pending is not None:
-            # End the turn here: the block above is complete (every tool_call
-            # answered), the LLM was NOT called again, and no system note was
-            # inserted. The user's decision arrives via the confirmation
-            # endpoint and is appended as a tool response by the continuation.
-            return (f"Awaiting your confirmation: {pending.get('action_type')} "
-                    f"({pending.get('action_id')}) — requires "
-                    f"{pending.get('requires_role')}. Approve or reject it.",
-                    pending, msgs)
     return ("I hit my step limit for this request. Tell me how you'd like to "
             "continue.", pending, msgs)
 
@@ -133,20 +125,30 @@ def run_confirmation_continuation(session, action_id, approved,
                 }
     emit("tool_result", {"tool": "confirm_action", "result": result})
     msgs = messages if messages is not None else _messages(session["session_id"])
-    tc_id = PENDING_TC.pop(action_id, None)
+
+    # 1. Rewrite the PROPOSER's stored history (a different session than
+    #    the one confirming) with the decision, so their next turn reports
+    #    the real outcome instead of a stale "pending".
+    reg = PENDING_TC.pop(action_id, None)
+    if reg:
+        proposer_msgs = CHATS.get(reg["session_id"])
+        if proposer_msgs is not None:
+            for m in proposer_msgs:
+                if m.get("role") == "tool" and m.get("tool_call_id") == reg["tc_id"]:
+                    m["content"] = json.dumps(result, default=str)
+                    break
+
+    # 2. Answer the confirming session. If the proposing block lives in
+    #    these messages, rewrite it in place (1 tool_call -> 1 tool
+    #    response); otherwise (cross-session approval) use a system note.
     replaced = False
-    if tc_id:
-        # Answer the original tool_call IN PLACE: rewrite the pending tool
-        # response with the decision. Appending a second response for the
-        # same call breaks the 1 tool_call -> 1 tool response contract.
+    if reg:
         for m in msgs:
-            if m.get("role") == "tool" and m.get("tool_call_id") == tc_id:
+            if m.get("role") == "tool" and m.get("tool_call_id") == reg["tc_id"]:
                 m["content"] = json.dumps(result, default=str)
                 replaced = True
                 break
     if not replaced:
-        # The proposing session's block isn't here (e.g. a different user
-        # confirmed from their own session) — use a note instead.
         msgs.append({"role": "system",
                     "content": f"System: action {action_id} was "
                                 f"{'APPROVED' if approved else 'REJECTED'} by the user. "

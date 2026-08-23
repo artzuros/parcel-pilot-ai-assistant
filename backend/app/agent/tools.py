@@ -54,6 +54,9 @@ def _h_task(session, args):
 def _h_propose_credit(session, args):
     return actions.propose_credit(session, args.get("order_id"))
 
+def _h_pending(session, args):
+    return actions.list_pending_approvals(session)
+
 TOOLS = [
     _t("doc_search",
        "Search ParcelPilot's internal documentation (support policy, SOPs, "
@@ -177,6 +180,15 @@ TOOLS = [
         "properties": {"order_id": {"type": "string", "description": "e.g. ORD-2002"}},
         "required": ["order_id"]},
        _h_propose_credit),
+
+    _t("pending_approvals",
+       "List actions awaiting approval from your role (READ-ONLY). Each item "
+       "has action_id, action_type, requires_role, created_at and payload. You "
+       "cannot approve from here — the user confirms via the Approvals panel.",
+       {"type": "object",
+        "properties": {},
+        "required": []},
+       _h_pending),
 ]
 
 

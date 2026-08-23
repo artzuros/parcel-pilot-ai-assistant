@@ -9,7 +9,7 @@ AISHA = login("aisha", "parcelpilot")
 EXPECTED = {"doc_search", "get_account", "get_orders", "get_tickets",
             "sla_deadline", "cancellation_check", "credit_check",
             "classify_severity", "escalate_ticket", "update_ticket",
-            "create_followup_task", "propose_credit"}
+            "create_followup_task", "propose_credit", "pending_approvals"}
 
 
 def test_registry_schema_names():

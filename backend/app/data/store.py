@@ -57,3 +57,36 @@ def log_audit(actor, action_id, event, detail=""):
             REFERENCE_NOW.isoformat(sep=" ", timespec="minutes")))
         conn.commit()
     finally: conn.close()
+    
+def list_pending():
+    """All actions awaiting approval (not expired), newest first."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM actions WHERE status = 'pending' "
+            "ORDER BY created_at DESC").fetchall()
+    finally:
+        conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["payload"] = json.loads(d["payload"])
+        if not is_expired(d):
+            out.append(d)
+    return out
+
+def list_submissions(session_id):
+    """Actions proposed from this session, any status, newest first."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM actions WHERE session_id = ? "
+            "ORDER BY created_at DESC", (session_id,)).fetchall()
+    finally:
+        conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["payload"] = json.loads(d["payload"])
+        out.append(d)
+    return out
