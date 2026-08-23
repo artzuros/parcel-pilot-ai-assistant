@@ -1,0 +1,7 @@
+[Unit]
+Description=Reset ParcelPilot demo store to pristine seed
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/ec2-user/parcel-pilot-ai-assistant/deploy/reset_db.sh

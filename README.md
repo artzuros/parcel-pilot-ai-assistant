@@ -123,6 +123,12 @@ ssh ec2-user@<host> 'cd ~/parcel-pilot-ai-assistant && ./deploy/deploy.sh'
 Secrets live in `/etc/parcelpilot.env` (`DEEPSEEK_API_KEY=...`, mode 600) —
 never on the frontend or in the repo.
 
+The demo store is reset to pristine seed automatically every 10 minutes
+(`deploy/parcelpilot-reset.timer` → `reset_db.sh`: stop, drop the SQLite
+store, restart — the app re-seeds at startup), so anyone opening the demo
+link gets a clean data pack. This also resets in-memory sessions and the
+token budget; it's a demo link, not a tenant.
+
 - API (tunneled): https://parcel-pilot-api.pranav-bansal.com
 - Frontend: Cloudflare Pages
 
