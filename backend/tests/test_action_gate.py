@@ -118,5 +118,31 @@ def test_credit_over_threshold_requires_manager(gate, monkeypatch):
     assert len(rows) == 2    # one from each credit test; both on record
 
 
+def test_credit_monthly_cap_enforced(gate):
+    # Make ORD-1001 (ACCT-001 / Northstar) credit-eligible: carrier fault +
+    # pickup 2.5h past the window end -> SOP v4 default = min(500, 10% of 4200).
+    conn = db.get_connection()
+    conn.execute("UPDATE orders SET carrier_fault = 1, customer_fault = 0, "
+                 "pickup_actual_at = '2026-08-16 14:00' WHERE order_id = 'ORD-1001'")
+    conn.commit()
+    r = actions.propose_credit(AISHA, "ORD-1001")
+    assert r["status"] == "pending" and r["amount_inr"] == 420
+
+    # INR 4,800 already issued for the account this reference month (2026-08):
+    # 4,800 + 420 > the INR 5,000 Northstar monthly cap -> no credit proposed.
+    conn.execute("""INSERT INTO credits (credit_id, order_id, amount_inr, status,
+                    issued_at, issued_by)
+                    VALUES ('CR-CAPTEST', 'ORD-1001', 4800, 'issued',
+                            '2026-08-16 09:00', 'test')""")
+    conn.commit()
+    conn.close()
+
+    r2 = actions.propose_credit(AISHA, "ORD-1001")
+    assert r2["status"] == "cap_exceeded"
+    assert r2["monthly_cap_inr"] == 5000
+    assert r2["issued_this_month_inr"] == 4800
+    assert r2["requested_inr"] == 420
+
+
 def test_confirm_unknown_action(gate):
     assert actions.confirm_action(ROHAN, "escalate_ticket-XXXX")["status"] == "not_found"

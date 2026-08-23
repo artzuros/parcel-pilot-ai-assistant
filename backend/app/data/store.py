@@ -10,6 +10,12 @@ def create_pending(action_type, session_id, payload, requires_role):
     action_id = f"{action_type}-{uuid.uuid4().hex[:8].upper()}"
     conn = get_connection()
     try:
+        # One open action per (session, type): a re-proposal supersedes the
+        # previous one instead of stacking duplicate cards in the panel.
+        conn.execute(
+            "UPDATE actions SET status = 'superseded' "
+            "WHERE session_id = ? AND action_type = ? AND status = 'pending'",
+            (session_id, action_type))
         conn.execute(
             """INSERT INTO actions (action_id, session_id, action_type, payload,
                 requires_role, status, created_at, expires_at)
@@ -39,6 +45,21 @@ def is_expired(pending):
         return False
     return datetime.now() >= datetime.fromisoformat(pending["expires_at"])
 
+def claim_action(action_id):
+    """Atomically claim a pending action for execution. Returns True exactly
+    once per action; a concurrent or duplicate confirm loses the race and
+    gets False, so a credit can never be issued twice."""
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "UPDATE actions SET status = 'executed', executed_at = ? "
+            "WHERE action_id = ? AND status = 'pending'",
+            (REFERENCE_NOW.isoformat(sep=" ", timespec="minutes"), action_id))
+        conn.commit()
+        return cur.rowcount == 1
+    finally:
+        conn.close()
+
 def mark_action(action_id, status):
     conn = get_connection()
     try:
@@ -58,6 +79,21 @@ def log_audit(actor, action_id, event, detail=""):
         conn.commit()
     finally: conn.close()
     
+def monthly_credits_issued(account_id):
+    """INR sum of issued credits for the account in the reference calendar
+    month — used to enforce the per-account monthly credit cap at propose time."""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            """SELECT COALESCE(SUM(c.amount_inr), 0)
+               FROM credits c JOIN orders o ON c.order_id = o.order_id
+               WHERE o.account_id = ? AND c.status = 'issued'
+                 AND substr(c.issued_at, 1, 7) = ?""",
+            (account_id, REFERENCE_NOW.strftime("%Y-%m"))).fetchone()
+        return float(row[0])
+    finally:
+        conn.close()
+
 def list_pending():
     """All actions awaiting approval (not expired), newest first."""
     conn = get_connection()

@@ -172,7 +172,7 @@ SEVERITY_RULES = [
 ]
 
 def classify_severity(text):
-    t = (text or "").lower()
+    t = ((text or "")).lower()
     for severity, keywords in SEVERITY_RULES:
         hits = [k for k in keywords if k in t]
         if hits: return {"severity": severity, "signals": hits}
@@ -236,6 +236,7 @@ def calculate_credit_eligibility(order, account=None, now=None):
     now = now or REFERENCE_NOW
     result = {
         "order_id": order.get("order_id"),
+        "account_id": account.get("account_id") if account else None,
         "eligible": False,
         "amount_inr": 0,
         "reason": "",

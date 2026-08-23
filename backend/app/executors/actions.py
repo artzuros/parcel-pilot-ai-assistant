@@ -5,6 +5,7 @@ from app.config import REFERENCE_NOW
 from app.data import store
 from app.data.db import get_connection
 from app.executors import calc
+from app.executors import policy_core as policy
 from app.executors.data_lookup import READ_ROLES, get_tickets
 
 
@@ -88,6 +89,18 @@ def propose_credit(session, order_id):
     if not res["eligible"]:
         return {"status": "not_eligible", "reason": res["reason"]}
 
+    account_id = res.get("account_id")
+    monthly_cap = policy.MONTHLY_CREDIT_CAP.get(account_id) if account_id else None
+    if monthly_cap is not None:
+        issued = store.monthly_credits_issued(account_id)
+        if issued + res["amount_inr"] > monthly_cap:
+            return {"status": "cap_exceeded", "account_id": account_id,
+                    "monthly_cap_inr": monthly_cap, "issued_this_month_inr": issued,
+                    "requested_inr": res["amount_inr"],
+                    "message": (f"Monthly credit cap of INR {monthly_cap} for "
+                                f"{account_id} would be exceeded (INR {issued:g} "
+                                f"already issued this month) — no credit proposed.")}
+
     requires_role = "manager" if res.get("approval_required") else "support_agent"
     action_id = store.create_pending(
         "issue_credit", session["session_id"],
@@ -125,7 +138,20 @@ def confirm_action(session, action_id, approve=True):
         store.log_audit(session.get("username", "?"), action_id, "action.rejected", "declined by user")
         return {"status": "rejected", "action_id": action_id}
 
-    _EXECUTORS[p["action_type"]](p["payload"])
+    # Atomic gate: exactly one confirm may execute the action; a concurrent
+    # or duplicate confirm sees already_handled (no double credit, no
+    # double escalate).
+    if not store.claim_action(action_id):
+        current = store.get_pending(action_id)
+        return {"status": "already_handled", "action_id": action_id,
+                "current_status": (current or {}).get("status", "unknown")}
+    try:
+        _EXECUTORS[p["action_type"]](p["payload"])
+    except Exception:
+        store.mark_action(action_id, "failed")
+        store.log_audit(session.get("username", "?"), action_id, "action.failed",
+                        f"{p['action_type']} execution raised")
+        raise
     store.mark_action(action_id, "executed")
     store.log_audit(session.get("username", "?"), action_id, "action.executed",
                     f"{p['action_type']} {p['payload']}")
