@@ -1,20 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# One-time EC2 setup: deps, venv, systemd service. Run as ubuntu, once.
+# One-time EC2 setup (Amazon Linux 2023): deps, venv, systemd service.
 REPO_URL="https://github.com/artzuros/parcel-pilot-ai-assistant.git"
 REPO="$HOME/parcel-pilot-ai-assistant"
 
-sudo apt-get update -y
-sudo apt-get install -y git python3-venv python3-pip
+sudo dnf install -y git python3-pip
 
 # Cloudflare Tunnel client (outbound-only ingress for the API)
 if ! command -v cloudflared >/dev/null 2>&1; then
-  sudo mkdir -p --mode=0755 /usr/share/keyrings
-  curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
-    | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
-  echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main" \
-    | sudo tee /etc/apt/sources.list.d/cloudflared.list >/dev/null
-  sudo apt-get update -y && sudo apt-get install -y cloudflared
+  sudo dnf install -y https://pkg.cloudflare.com/cloudflared-linux-x86_64.rpm
 fi
 
 if [ ! -d "$REPO" ]; then
@@ -35,4 +29,4 @@ sudo cp "$REPO/deploy/parcelpilot.service" /etc/systemd/system/parcelpilot.servi
 sudo systemctl daemon-reload
 sudo systemctl enable --now parcelpilot
 sleep 3
-curl -s http://localhost/api/health && echo " <- health OK"
+curl -s http://localhost:8000/api/health && echo " <- health OK"

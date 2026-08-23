@@ -4,11 +4,11 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=ubuntu
-WorkingDirectory=/home/ubuntu/parcel-pilot-ai-assistant/backend
+User=ec2-user
+WorkingDirectory=/home/ec2-user/parcel-pilot-ai-assistant/backend
 EnvironmentFile=/etc/parcelpilot.env
 # Bound to localhost only — Cloudflare Tunnel is the only way in (no public port).
-ExecStart=/home/ubuntu/parcel-pilot-ai-assistant/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+ExecStart=/home/ec2-user/parcel-pilot-ai-assistant/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
 Restart=on-failure
 RestartSec=3
 StandardOutput=journal
