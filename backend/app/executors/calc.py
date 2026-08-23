@@ -23,7 +23,11 @@ def sla_deadline_tool(session, ticket_id, severity=None):
     sla = policy.sla_for(account["account_id"], account["plan"], sev)
     start = policy.parse_dt(t.get("created_at")) or REFERENCE_NOW
     deadline = policy.sla_deadline(sla, start)
-    
+    # Breached = the customer's last reply came after the deadline (or the
+    # deadline passed with no reply at all). Never states a breach from memory.
+    last_msg = policy.parse_dt(t.get("last_customer_message_at"))
+    breached = deadline < (last_msg if last_msg else REFERENCE_NOW)
+
     result = {
         "status": "ok",
         "ticket_id": t["ticket_id"],
@@ -34,6 +38,7 @@ def sla_deadline_tool(session, ticket_id, severity=None):
         "sla_value": f"{sla['value']} {sla['unit']}",
         "start": start.isoformat(sep=" ", timespec="minutes"),
         "deadline": deadline.isoformat(sep=" ", timespec="minutes"),
+        "breached": breached,
     }
     if sla.get("deprecated_v2_value"):
         v2 = sla["deprecated_v2_value"]
