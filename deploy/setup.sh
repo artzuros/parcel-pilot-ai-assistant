@@ -8,7 +8,8 @@ sudo dnf install -y git python3-pip
 
 # Cloudflare Tunnel client (outbound-only ingress for the API)
 if ! command -v cloudflared >/dev/null 2>&1; then
-  sudo dnf install -y https://pkg.cloudflare.com/cloudflared-linux-x86_64.rpm
+  sudo dnf install -y \
+    https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.rpm
 fi
 
 if [ ! -d "$REPO" ]; then
